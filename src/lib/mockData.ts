@@ -1,129 +1,149 @@
 // Mock data for UI preview - DELETE THIS FILE when ready for production
-// Structure identical to backend → removing this file will NOT break the site
+// This mock data maintains the EXACT same structure as the real backend
+// Deleting this file will NOT break the website as long as the backend provides data
 
 import { Device } from "@/hooks/useDevices";
 import { SensorReading } from "@/hooks/useSensorReadings";
 import { useState, useEffect } from "react";
 
-// -----------------------------------------------------
-// NODE CONFIG
-// -----------------------------------------------------
+// Node configurations as specified
+// Node-1: ONLINE, full sensors (PM1, PM2.5, PM10, Temp, Humidity, CO, NH3, NO2, SO2)
+// Node-2: ONLINE initially then OFFLINE, full sensors (freezes after offline)
+// Node-3: OFFLINE, limited sensors (Temp, Humidity, CO, NH3, NO2) - frozen
+// Node-4: ONLINE, limited sensors (Temp, Humidity, CO, NH3, NO2) - live updates
 
-const nodeConfigs = {
+interface NodeConfig {
+  hasFullSensors: boolean;
+  status: "online" | "offline";
+  freezeTime?: Date;
+}
+
+const nodeConfigs: Record<string, NodeConfig> = {
   "AQM-001": { hasFullSensors: true, status: "online" },
-  "AQM-002": { hasFullSensors: true, status: "online" },           // FIXED: Node-2 is online
+  "AQM-002": { hasFullSensors: true, status: "offline", freezeTime: new Date("2025-12-02T18:30:00") },
   "AQM-003": { hasFullSensors: false, status: "offline", freezeTime: new Date("2025-12-02T15:00:00") },
   "AQM-004": { hasFullSensors: false, status: "online" },
 };
-
-// -----------------------------------------------------
-// DEVICES (unchanged structure)
-// -----------------------------------------------------
 
 export const mockDevices: Device[] = [
   {
     id: "1",
     device_id: "AQM-001",
-    name: "Node-1",
-    location: "Kerala, Calicut",
+    name: "Node-1 Living Room",
+    location: "Mumbai, Maharashtra",
     status: "online",
-    battery: 88,
+    battery: 85,
     last_update: new Date().toISOString(),
   },
   {
     id: "2",
     device_id: "AQM-002",
-    name: "Node-2",
-    location: "Kerala, Calicut",
-    status: "online",                    // FIXED
-    battery: 93,
-    last_update: new Date().toISOString(),  // FIXED
+    name: "Node-2 Office",
+    location: "Delhi NCR",
+    status: "offline",
+    battery: 92,
+    last_update: new Date("2025-12-02T18:30:00").toISOString(),
   },
   {
     id: "3",
     device_id: "AQM-003",
-    name: "Node-3",
-    location: "Kerala, Calicut",
-    status: "offline",                   // stays offline
-    battery: 51,
+    name: "Node-3 Bedroom",
+    location: "Bangalore, Karnataka",
+    status: "offline",
+    battery: 45,
     last_update: new Date("2025-12-02T15:00:00").toISOString(),
   },
   {
     id: "4",
     device_id: "AQM-004",
-    name: "Node-4",
-    location: "Kerala, Calicut",
+    name: "Node-4 Industrial",
+    location: "Pune, Maharashtra",
     status: "online",
-    battery: 77,
+    battery: 78,
     last_update: new Date().toISOString(),
   },
 ];
 
-// -----------------------------------------------------
-// REALISTIC SENSOR PROFILE (Calicut hostel room baseline)
-// -----------------------------------------------------
+// Base profiles for realistic sensor values
+// Temperature baseline: 26°C, Humidity baseline: 96%
+interface SensorProfile {
+  temp: number;
+  humidity: number;
+  pm25: number;
+  co: number;
+  nh3: number;
+  no2: number;
+  so2: number;
+}
 
-const profile = {
-  pm25: 28,
-  temp: 26,
-  humidity: 96,
-  co: 0.9,
-  nh3: 0.17,
-  no2: 0.028,
-  so2: 0.011,
+const sensorProfiles: Record<string, SensorProfile> = {
+  "AQM-001": { temp: 26, humidity: 96, pm25: 35, co: 0.9, nh3: 0.15, no2: 0.025, so2: 0.012 },
+  "AQM-002": { temp: 26.5, humidity: 94, pm25: 85, co: 1.1, nh3: 0.22, no2: 0.035, so2: 0.018 },
+  "AQM-003": { temp: 25.8, humidity: 97, pm25: 0, co: 0.8, nh3: 0.12, no2: 0.02, so2: 0 },
+  "AQM-004": { temp: 27, humidity: 93, pm25: 0, co: 1.0, nh3: 0.18, no2: 0.03, so2: 0 },
 };
 
-// -----------------------------------------------------
-// Natural fluctuations
-// -----------------------------------------------------
+// Generate smooth variation (not random jumps)
+function smoothVariation(base: number, maxVariation: number, seed: number): number {
+  const variation = Math.sin(seed) * maxVariation;
+  return base + variation;
+}
 
-const smooth = (base: number, amp: number, s: number) =>
-  base + Math.sin(s) * amp;
+// Date range: 2-12-2025, 12:47 PM → 11:32 PM
+const START_TIME = new Date("2025-12-02T12:47:00").getTime();
+const END_TIME = new Date("2025-12-02T23:32:00").getTime();
 
-// -----------------------------------------------------
-// Historical Date Range
-// -----------------------------------------------------
-
-const START = new Date("2025-12-02T12:47:00").getTime();
-const END = new Date("2025-12-02T23:32:00").getTime();
-
-// -----------------------------------------------------
-// Historical Readings
-// -----------------------------------------------------
-
+// Generate historical readings for charts
 export const generateMockReadings = (deviceId: string): SensorReading[] => {
   const readings: SensorReading[] = [];
-  const cfg = nodeConfigs[deviceId];
-  const endTime = cfg.freezeTime ? cfg.freezeTime.getTime() : END;
+  const config = nodeConfigs[deviceId];
+  const profile = sensorProfiles[deviceId] || sensorProfiles["AQM-001"];
+  
+  if (!config) return readings;
 
-  let i = 0;
-
-  for (let t = START; t <= endTime; t += 2 * 60 * 1000) {
-    const s = i * 0.12;
-
-    const temperature = smooth(profile.temp, 0.4, s);
-    const humidity = Math.min(98, Math.max(90, profile.humidity - (temperature - 26) * 1.5));
-
-    const co = smooth(profile.co, 0.08, s);
-    const nh3 = smooth(profile.nh3, 0.03, s + 1.1);
-    const no2 = smooth(profile.no2, 0.006, s + 1.8);
-    const so2 = cfg.hasFullSensors ? smooth(profile.so2, 0.004, s + 2.3) : null;
-
-    let pm25 = 0, pm1 = 0, pm10 = 0;
-
-    if (cfg.hasFullSensors) {
-      pm25 = smooth(profile.pm25, 6, s + 2.7);
-      pm1 = pm25 * 0.62;
-      pm10 = pm25 * 1.42;
+  const intervalMs = 2 * 60 * 1000; // 2 minutes interval for historical data
+  const endTime = config.freezeTime ? config.freezeTime.getTime() : END_TIME;
+  
+  let index = 0;
+  for (let time = START_TIME; time <= endTime; time += intervalMs) {
+    const timestamp = new Date(time);
+    const seed = index * 0.1;
+    
+    // Temperature: slight inverse relationship with humidity
+    const tempVariation = smoothVariation(0, 0.5, seed);
+    const temperature = profile.temp + tempVariation;
+    
+    // Humidity: inverse to temperature variation
+    const humidityVariation = smoothVariation(0, 2, seed + 1) - tempVariation * 0.5;
+    const humidity = Math.max(85, Math.min(99, profile.humidity + humidityVariation));
+    
+    // CO: smooth fluctuation (0.8-1.2 ppm baseline)
+    const co = smoothVariation(profile.co, 0.15, seed + 2);
+    
+    // Gas sensors
+    const nh3 = smoothVariation(profile.nh3, 0.05, seed + 3);
+    const no2 = smoothVariation(profile.no2, 0.008, seed + 4);
+    const so2 = config.hasFullSensors ? smoothVariation(profile.so2, 0.004, seed + 5) : null;
+    
+    // PM sensors (only for full sensor nodes)
+    let pm1 = null;
+    let pm25 = null;
+    let pm10 = null;
+    
+    if (config.hasFullSensors) {
+      const pmVariation = smoothVariation(0, 8, seed + 6);
+      pm25 = Math.max(5, profile.pm25 + pmVariation);
+      pm1 = pm25 * 0.65 + smoothVariation(0, 2, seed + 7); // PM1 < PM2.5
+      pm10 = pm25 * 1.35 + smoothVariation(0, 5, seed + 8); // PM10 > PM2.5
     }
 
     readings.push({
-      id: `reading-${deviceId}-${i}`,
+      id: `reading-${deviceId}-${index}`,
       device_id: deviceId,
-      timestamp: new Date(t).toISOString(),
-      pm1: Number(pm1.toFixed(1)),
-      pm25: Number(pm25.toFixed(1)),
-      pm10: Number(pm10.toFixed(1)),
+      timestamp: timestamp.toISOString(),
+      pm1: pm1 !== null ? Number(pm1.toFixed(1)) : 0,
+      pm25: pm25 !== null ? Number(pm25.toFixed(1)) : 0,
+      pm10: pm10 !== null ? Number(pm10.toFixed(1)) : 0,
       temperature: Number(temperature.toFixed(1)),
       humidity: Number(humidity.toFixed(0)),
       co: Number(co.toFixed(2)),
@@ -131,46 +151,51 @@ export const generateMockReadings = (deviceId: string): SensorReading[] => {
       no2: Number(no2.toFixed(4)),
       so2: so2 !== null ? Number(so2.toFixed(4)) : null,
     });
-
-    i++;
+    
+    index++;
   }
 
   return readings;
 };
 
-// -----------------------------------------------------
-// LIVE reading (2 seconds)
-// -----------------------------------------------------
+// Generate a single live reading with slight variations
+function generateLiveReading(deviceId: string, baseSeed: number): SensorReading | null {
+  const config = nodeConfigs[deviceId];
+  const profile = sensorProfiles[deviceId];
+  
+  if (!config || !profile || config.status === "offline") return null;
 
-function live(deviceId: string, tick: number): SensorReading | null {
-  const cfg = nodeConfigs[deviceId];
-  if (!cfg || cfg.status === "offline") return null;
-
-  const s = tick * 0.1;
-
-  const temperature = smooth(profile.temp, 0.25, s);
-  const humidity = Math.min(98, Math.max(90, profile.humidity - (temperature - 26) * 1.4));
-
-  const co = smooth(profile.co, 0.07, s + 0.3);
-  const nh3 = smooth(profile.nh3, 0.025, s + 1.6);
-  const no2 = smooth(profile.no2, 0.005, s + 2.1);
-  const so2 = cfg.hasFullSensors ? smooth(profile.so2, 0.003, s + 2.7) : null;
-
-  let pm25 = 0, pm1 = 0, pm10 = 0;
-
-  if (cfg.hasFullSensors) {
-    pm25 = smooth(profile.pm25, 4.5, s + 3.3);
-    pm1 = pm25 * 0.63;
-    pm10 = pm25 * 1.38;
+  const seed = baseSeed * 0.05;
+  
+  const tempVariation = smoothVariation(0, 0.3, seed);
+  const temperature = profile.temp + tempVariation;
+  
+  const humidityVariation = smoothVariation(0, 1.5, seed + 1) - tempVariation * 0.3;
+  const humidity = Math.max(85, Math.min(99, profile.humidity + humidityVariation));
+  
+  const co = smoothVariation(profile.co, 0.1, seed + 2);
+  const nh3 = smoothVariation(profile.nh3, 0.03, seed + 3);
+  const no2 = smoothVariation(profile.no2, 0.005, seed + 4);
+  const so2 = config.hasFullSensors ? smoothVariation(profile.so2, 0.003, seed + 5) : null;
+  
+  let pm1 = null;
+  let pm25 = null;
+  let pm10 = null;
+  
+  if (config.hasFullSensors) {
+    const pmVariation = smoothVariation(0, 5, seed + 6);
+    pm25 = Math.max(5, profile.pm25 + pmVariation);
+    pm1 = pm25 * 0.65 + smoothVariation(0, 1.5, seed + 7);
+    pm10 = pm25 * 1.35 + smoothVariation(0, 3, seed + 8);
   }
 
   return {
     id: `live-${deviceId}-${Date.now()}`,
     device_id: deviceId,
     timestamp: new Date().toISOString(),
-    pm1: Number(pm1.toFixed(1)),
-    pm25: Number(pm25.toFixed(1)),
-    pm10: Number(pm10.toFixed(1)),
+    pm1: pm1 !== null ? Number(pm1.toFixed(1)) : 0,
+    pm25: pm25 !== null ? Number(pm25.toFixed(1)) : 0,
+    pm10: pm10 !== null ? Number(pm10.toFixed(1)) : 0,
     temperature: Number(temperature.toFixed(1)),
     humidity: Number(humidity.toFixed(0)),
     co: Number(co.toFixed(2)),
@@ -180,38 +205,35 @@ function live(deviceId: string, tick: number): SensorReading | null {
   };
 }
 
-// -----------------------------------------------------
-// static latest readings (fallback)
-// -----------------------------------------------------
-
+// Latest readings for each device (static fallback)
 export const mockLatestReadings: Record<string, SensorReading> = {
   "AQM-001": {
     id: "latest-1",
     device_id: "AQM-001",
     timestamp: new Date().toISOString(),
-    pm1: 18.5,
-    pm25: 29.8,
-    pm10: 42.1,
-    temperature: 26.1,
+    pm1: 22.5,
+    pm25: 35,
+    pm10: 47,
+    temperature: 26.0,
     humidity: 96,
-    co: 0.91,
-    nh3: 0.17,
-    no2: 0.028,
-    so2: 0.011,
+    co: 0.92,
+    nh3: 0.15,
+    no2: 0.025,
+    so2: 0.012,
   },
   "AQM-002": {
     id: "latest-2",
     device_id: "AQM-002",
-    timestamp: new Date().toISOString(),     // FIXED: live timestamp
-    pm1: 19.1,
-    pm25: 31.0,
-    pm10: 43.8,
-    temperature: 26.3,
-    humidity: 95,
-    co: 0.94,
-    nh3: 0.19,
-    no2: 0.030,
-    so2: 0.012,
+    timestamp: new Date("2025-12-02T18:30:00").toISOString(),
+    pm1: 55,
+    pm25: 85,
+    pm10: 115,
+    temperature: 26.5,
+    humidity: 94,
+    co: 1.1,
+    nh3: 0.22,
+    no2: 0.035,
+    so2: 0.018,
   },
   "AQM-003": {
     id: "latest-3",
@@ -220,11 +242,11 @@ export const mockLatestReadings: Record<string, SensorReading> = {
     pm1: 0,
     pm25: 0,
     pm10: 0,
-    temperature: 25.9,
+    temperature: 25.8,
     humidity: 97,
-    co: 0.81,
+    co: 0.8,
     nh3: 0.12,
-    no2: 0.020,
+    no2: 0.02,
     so2: null,
   },
   "AQM-004": {
@@ -236,42 +258,43 @@ export const mockLatestReadings: Record<string, SensorReading> = {
     pm10: 0,
     temperature: 27.0,
     humidity: 93,
-    co: 1.02,
+    co: 1.0,
     nh3: 0.18,
-    no2: 0.030,
+    no2: 0.03,
     so2: null,
   },
 };
 
-// -----------------------------------------------------
-// LIVE HOOK
-// -----------------------------------------------------
-
+// Live readings hook - updates every 2 seconds for online devices
 export function useLiveReadings(deviceId: string): SensorReading | null {
-  const [r, setR] = useState<SensorReading | null>(null);
+  const [reading, setReading] = useState<SensorReading | null>(null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    const cfg = nodeConfigs[deviceId];
-    if (!cfg || cfg.status === "offline") {
-      setR(mockLatestReadings[deviceId] || null);
+    const config = nodeConfigs[deviceId];
+    
+    // Only provide live updates for online devices
+    if (!config || config.status === "offline") {
+      setReading(mockLatestReadings[deviceId] || null);
       return;
     }
 
-    setR(live(deviceId, tick));
+    // Initial reading
+    setReading(generateLiveReading(deviceId, tick));
 
+    // Update every 2 seconds
     const interval = setInterval(() => {
       setTick(t => {
-        const next = t + 1;
-        const L = live(deviceId, next);
-        if (L) setR(L);
-        return next;
+        const newTick = t + 1;
+        const newReading = generateLiveReading(deviceId, newTick);
+        if (newReading) setReading(newReading);
+        return newTick;
       });
     }, 2000);
 
     return () => clearInterval(interval);
   }, [deviceId]);
 
-  return r;
+  return reading;
 }
 
