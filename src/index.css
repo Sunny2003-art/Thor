@@ -1,0 +1,256 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Premium Dark Theme - SF Pro Display fallback to Inter */
+
+@layer base {
+  :root {
+    --font-sans: "SF Pro Display", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    
+    --background: 0 0% 5%;
+    --foreground: 0 0% 95%;
+
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 186 100% 60%;
+    --primary-foreground: 0 0% 5%;
+
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 95%;
+
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 55%;
+
+    --accent: 145 63% 55%;
+    --accent-foreground: 0 0% 5%;
+
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 186 100% 60%;
+
+    --radius: 0.75rem;
+
+    /* Premium Accent Colors */
+    --premium-aqua: 186 100% 60%;
+    --premium-green: 145 63% 55%;
+    --premium-gold: 42 85% 65%;
+    --premium-red: 0 70% 60%;
+
+    /* AQI Color Scale */
+    --aqi-good: 145 63% 55%;
+    --aqi-moderate: 42 85% 65%;
+    --aqi-sensitive: 27 90% 55%;
+    --aqi-unhealthy: 0 70% 60%;
+    --aqi-very-unhealthy: 340 75% 50%;
+    --aqi-hazardous: 291 60% 40%;
+
+    /* Dashboard specific */
+    --dashboard-bg: 0 0% 5%;
+    --chart-grid: 0 0% 20%;
+    --sensor-card: 0 0% 10%;
+    
+    /* Premium Shadows */
+    --shadow-sm: 0 2px 8px -2px hsl(0 0% 0% / 0.5);
+    --shadow-md: 0 4px 16px -4px hsl(0 0% 0% / 0.6);
+    --shadow-lg: 0 8px 24px -6px hsl(0 0% 0% / 0.7);
+    --shadow-premium: 0 0 24px rgba(0, 0, 0, 0.4);
+    --shadow-glow: 0 0 20px hsl(186 100% 60% / 0.2);
+    --shadow-glow-green: 0 0 20px hsl(145 63% 55% / 0.3);
+    --shadow-glow-red: 0 0 20px hsl(0 70% 60% / 0.3);
+
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 186 100% 60%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 186 100% 60%;
+  }
+
+  .dark {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 95%;
+
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 186 100% 60%;
+    --primary-foreground: 0 0% 5%;
+
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 95%;
+
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 55%;
+
+    --accent: 145 63% 55%;
+    --accent-foreground: 0 0% 5%;
+
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 186 100% 60%;
+
+    --dashboard-bg: 0 0% 5%;
+    --chart-grid: 0 0% 20%;
+    --sensor-card: 0 0% 10%;
+
+    --shadow-sm: 0 2px 8px -2px hsl(0 0% 0% / 0.5);
+    --shadow-md: 0 4px 16px -4px hsl(0 0% 0% / 0.6);
+    --shadow-lg: 0 8px 24px -6px hsl(0 0% 0% / 0.7);
+    --shadow-premium: 0 0 24px rgba(0, 0, 0, 0.4);
+    --shadow-glow: 0 0 20px hsl(186 100% 60% / 0.2);
+
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 186 100% 60%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 186 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+  }
+}
+
+/* Premium Animations */
+@layer utilities {
+  .premium-transition {
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .premium-hover {
+    @apply hover:opacity-100 opacity-95;
+  }
+
+  .premium-card-hover {
+    @apply transition-all duration-200;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .premium-card-hover:hover {
+    box-shadow: 0 0 18px rgba(0, 0, 0, 0.35);
+    transform: translateY(-2px);
+  }
+
+  .premium-card-hover:active {
+    transform: scale(0.98);
+  }
+
+  .premium-btn-active:active {
+    transform: scale(0.97);
+  }
+
+  .premium-fade-in {
+    animation: premiumFadeIn 100ms ease-out;
+  }
+
+  @keyframes premiumFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* AQI Bar Animations */
+  .aqi-card-transition {
+    transition: background-color 180ms ease-out, box-shadow 180ms ease-out;
+  }
+
+  .aqi-bar-hover {
+    transition: opacity 150ms ease-out;
+  }
+
+  .aqi-bar-hover:hover {
+    opacity: 0.95;
+  }
+
+  .aqi-value-transition {
+    transition: transform 150ms ease-out, opacity 120ms ease-out;
+  }
+
+  .aqi-label-transition {
+    transition: opacity 150ms ease-out;
+  }
+
+  /* Status animations */
+  .status-transition {
+    transition: opacity 150ms ease-out;
+  }
+
+  .status-badge-transition {
+    transition: transform 150ms ease-out, opacity 150ms ease-out;
+  }
+
+  .status-dot-transition {
+    transition: background-color 180ms ease-out, box-shadow 180ms ease-out;
+  }
+
+  /* Sensor card hover - tiny scale */
+  .sensor-card-hover {
+    @apply transition-all duration-200;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sensor-card-hover:hover {
+    transform: scale(1.01);
+    box-shadow: 0 0 16px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Sidebar active highlight */
+  .sidebar-item-active {
+    @apply transition-all duration-150 ease-out;
+    border-left: 2px solid hsl(var(--primary));
+    background: linear-gradient(90deg, hsl(var(--primary) / 0.08), transparent);
+  }
+
+  /* Chart transitions */
+  .chart-container {
+    transition: opacity 150ms ease-out;
+  }
+
+  /* Value update animation */
+  .value-update {
+    animation: valueUpdate 180ms ease-out;
+  }
+
+  @keyframes valueUpdate {
+    0% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+}
