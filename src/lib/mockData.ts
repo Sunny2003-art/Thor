@@ -19,13 +19,13 @@ const mockOnlineState: Record<string, boolean> = {
 
 const nodeConfigs = {
   "AQM-001": { hasFullSensors: true, status: "online" },
-  "AQM-002": { hasFullSensors: true, status: "offline", freezeTime: new Date("2025-12-03T12:23:00") }, // OFFLINE
+  "AQM-002": { hasFullSensors: true, status: "offline", freezeTime: new Date("2025-12-03T12:23:00") },
   "AQM-003": { hasFullSensors: false, status: "offline", freezeTime: new Date("2025-12-03T12:23:00") },
-  "AQM-004": { hasFullSensors: false, status: "online" },
+  "AQM-004": { hasFullFullSensors: false, status: "online" },
 };
 
 // -----------------------------------------------------
-// DEVICE LIST (unchanged)
+// DEVICE LIST
 // -----------------------------------------------------
 
 export const mockDevices: Device[] = [
@@ -36,57 +36,71 @@ export const mockDevices: Device[] = [
 ];
 
 // -----------------------------------------------------
-// BASELINES per node — Node-2 corrected
+// BASELINES per node (UPDATED NODE-2 VALUES ONLY)
 // -----------------------------------------------------
 
 const baseProfile = {
+  // Node-1 (AC room)
   "AQM-001": { pm25: 14, temp: 25.1, humidity: 51, co: 0.42, nh3: 0.08, no2: 0.014, so2: 0.004 },
 
-  // ✅ FIXED NODE-2 — HOSTEL ROOM VALUES (moderate, realistic)
+  // NODE-2: HOSTEL ROOM (moderate)
   "AQM-002": {
-    pm25: 18,
-    temp: 27.3,
-    humidity: 73,
-    co: 0.49,
-    nh3: 0.12,
+    pm25: 17.2,
+    temp: 27.4,
+    humidity: 72,
+    co: 0.52,
+    nh3: 0.11,
     no2: 0.017,
-    so2: 0.006
+    so2: 0.006,
   },
 
+  // Node-3 (offline frozen)
   "AQM-003": { pm25: 0, temp: 26.8, humidity: 74, co: 0.52, nh3: 0.12, no2: 0.020, so2: 0 },
+
+  // Node-4 (hostel room, online)
   "AQM-004": { pm25: 0, temp: 26.4, humidity: 76, co: 0.48, nh3: 0.11, no2: 0.019, so2: 0 },
 };
 
 // -----------------------------------------------------
-// RANDOM UTILS
+// HISTORICAL READING PROFILE FOR NODE-2 (moderate hostel room)
 // -----------------------------------------------------
 
-function clampStep(prev: number, next: number, cap: number) {
-  if (Math.abs(next - prev) > cap) {
-    return prev + Math.sign(next - prev) * cap;
-  }
-  return next;
-}
+const hostelProfileForNode2 = {
+  temp: [26.8, 28.2],
+  hum: [65, 78],
+  pm25: [12, 22],
+  pm10: [18, 35],
+  pm1: [8, 15],
+  co: [0.35, 0.75],
+  nh3: [0.06, 0.14],
+  no2: [0.010, 0.022],
+  so2: [0.003, 0.008],
+};
 
-function ema(prev: number, target: number, alpha: number) {
-  return prev * (1 - alpha) + target * alpha;
-}
-
-// -----------------------------------------------------
-// HISTORICAL READINGS
-// (Node-2 will correctly produce hostel room data)
 // -----------------------------------------------------
 
 const hostelProfile = {
-  temp: [26.5, 28.3],
-  hum: [65, 80],
+  temp: [26.8, 28.1],
+  hum: [65, 78],
   pm25: [12, 22],
-  pm10: [18, 36],
-  pm1: [8, 14],
+  pm10: [18, 35],
+  pm1: [8, 15],
   co: [0.35, 0.80],
-  nh3: [0.05, 0.17],
+  nh3: [0.05, 0.18],
   no2: [0.010, 0.028],
   so2: [0.001, 0.009],
+};
+
+const acProfile = {
+  temp: [24.8, 25.8],
+  hum: [46, 54],
+  pm25: [6, 12],
+  pm10: [10, 24],
+  pm1: [4, 9],
+  co: [0.24, 0.55],
+  nh3: [0.03, 0.12],
+  no2: [0.008, 0.020],
+  so2: [0.001, 0.006],
 };
 
 const rand = (min: number, max: number) =>
@@ -95,7 +109,6 @@ const rand = (min: number, max: number) =>
 export const generateMockReadings = (deviceId: string): SensorReading[] => {
   const readings: SensorReading[] = [];
   const cfg = nodeConfigs[deviceId];
-
   if (!cfg) return readings;
 
   const start = new Date("2025-12-02T23:34:00").getTime();
@@ -103,8 +116,11 @@ export const generateMockReadings = (deviceId: string): SensorReading[] => {
     ? cfg.freezeTime.getTime()
     : new Date("2025-12-03T12:23:00").getTime();
 
+  const profile =
+    deviceId === "AQM-002" ? hostelProfileForNode2 : hostelProfile;
+
   for (let t = start; t <= end; t += 60_000) {
-    readings.push(makeReading(deviceId, t, hostelProfile, cfg.hasFullSensors));
+    readings.push(makeReading(deviceId, t, profile, cfg.hasFullSensors));
   }
 
   return readings;
@@ -131,8 +147,7 @@ function makeReading(deviceId: string, t: number, p: any, full: boolean): Sensor
 }
 
 // -----------------------------------------------------
-// REAL-TIME LIVE ENGINE (EVERY 5 SEC)
-// Node-2 stays offline → NO live updates
+// LIVE ENGINE
 // -----------------------------------------------------
 
 const ALPHA = 0.18;
@@ -176,8 +191,8 @@ function generateLiveReading(deviceId: string, prev: SensorReading | null): Sens
 
   const prevVal = prev || target;
 
-  const smoothVal = (f: keyof SensorReading) =>
-    clampStep(prevVal[f] as number, ema(prevVal[f] as number, target[f] as number, ALPHA), caps[f]);
+  const smoothVal = (field: keyof SensorReading) =>
+    clampStep(prevVal[field] as number, ema(prevVal[field] as number, target[field] as number, ALPHA), caps[field]);
 
   return {
     id: `live-${deviceId}-${Date.now()}`,
@@ -199,27 +214,26 @@ function generateLiveReading(deviceId: string, prev: SensorReading | null): Sens
 }
 
 // -----------------------------------------------------
-// LATEST READINGS (Node-2 corrected)
+// LATEST SNAPSHOT (UPDATED NODE-2 ONLY)
 // -----------------------------------------------------
 
 export const mockLatestReadings: Record<string, SensorReading> = {
   "AQM-001": generateLiveReading("AQM-001", null)!,
 
-  // ✅ FIXED NODE-2 LATEST READING (HOSTEL ROOM)
   "AQM-002": {
     id: "latest-2",
     device_id: "AQM-002",
     timestamp: new Date("2025-12-03T12:23:00").toISOString(),
 
-    pm1: 12.5,
-    pm25: 18.4,
-    pm10: 28.6,
+    pm1: 10.2,
+    pm25: 16.8,
+    pm10: 27.9,
 
-    temperature: 27.3,
-    humidity: 73,
+    temperature: 27.5,
+    humidity: 72,
 
-    co: 0.49,
-    nh3: 0.12,
+    co: 0.52,
+    nh3: 0.11,
     no2: 0.017,
     so2: 0.006,
   },
@@ -255,12 +269,10 @@ export function useLiveReadings(deviceId: string): SensorReading | null {
 
     const interval = setInterval(() => {
       setReading(prev => generateLiveReading(deviceId, prev));
-    }, 5000);
+    }, INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, [deviceId]);
 
   return reading;
 }
-
-
