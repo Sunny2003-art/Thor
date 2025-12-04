@@ -1,52 +1,52 @@
-// Mock data for UI preview - DELETE THIS FILE anytime (safe)
-// Structure matches backend → website will NOT break
+// Mock data for UI preview - DELETE THIS FILE when ready for production
+// Structure matches backend exactly
 
 import { Device } from "@/hooks/useDevices";
 import { SensorReading } from "@/hooks/useSensorReadings";
 import { useState, useEffect } from "react";
 
-// -----------------------------------------------------
-// NODE CONFIG
-// -----------------------------------------------------
+// ---------------------------------------------------------
+// NODE CONFIGS (per your rules)
+// ---------------------------------------------------------
 
 const nodeConfigs = {
-  "AQM-001": { hasFullSensors: true, status: "online", liveStart: new Date("2025-12-04T09:40:00") }, // Node-1 AC room
-  "AQM-002": { hasFullSensors: true, status: "offline", freezeTime: new Date("2025-12-03T00:12:00") }, // frozen
-  "AQM-003": { hasFullSensors: false, status: "offline", freezeTime: new Date("2025-12-03T00:12:00") }, // frozen
-  "AQM-004": { hasFullSensors: false, status: "online", liveStart: new Date("2025-12-04T09:40:00") }, // Node-4 hostel
+  "AQM-001": { hasFullSensors: true, status: "online", liveStart: new Date("2025-12-04T09:40:00") },
+  "AQM-002": { hasFullSensors: true, status: "offline", freezeTime: new Date("2025-12-03T12:12:00") },
+  "AQM-003": { hasFullSensors: false, status: "offline", freezeTime: new Date("2025-12-03T12:12:00") },
+  "AQM-004": { hasFullSensors: false, status: "online", liveStart: new Date("2025-12-04T09:40:00") },
 };
 
-// -----------------------------------------------------
-// DEVICES LIST (UNCHANGED STRUCTURE)
-// -----------------------------------------------------
+// ---------------------------------------------------------
+// DEVICES (names & structure unchanged)
+// ---------------------------------------------------------
 
 export const mockDevices: Device[] = [
-  { id: "1", device_id: "AQM-001", name: "Node-1", location: "Room", status: "online", battery: 92, last_update: new Date().toISOString() },
-  { id: "2", device_id: "AQM-002", name: "Node-2", location: "Room", status: "offline", battery: 86, last_update: new Date("2025-12-03T00:12:00").toISOString() },
-  { id: "3", device_id: "AQM-003", name: "Node-3", location: "Room", status: "offline", battery: 80, last_update: new Date("2025-12-03T00:12:00").toISOString() },
+  { id: "1", device_id: "AQM-001", name: "Node-1", location: "Room", status: "online", battery: 85, last_update: new Date().toISOString() },
+  { id: "2", device_id: "AQM-002", name: "Node-2", location: "Room", status: "offline", battery: 90, last_update: new Date("2025-12-03T12:12:00").toISOString() },
+  { id: "3", device_id: "AQM-003", name: "Node-3", location: "Room", status: "offline", battery: 75, last_update: new Date("2025-12-03T12:12:00").toISOString() },
   { id: "4", device_id: "AQM-004", name: "Node-4", location: "Room", status: "online", battery: 78, last_update: new Date().toISOString() },
 ];
 
-// -----------------------------------------------------
-// BASE PROFILES (REALISTIC VALUES)
-// -----------------------------------------------------
+// ---------------------------------------------------------
+// REALISTIC ENVIRONMENT PROFILES
+// ---------------------------------------------------------
 
-// Node-1 → AC room with 15 people (clean, low-moderate, stable)
-const acRoom = {
-  pm25: 12,
-  temp: 25.6,
+// Node-1: AC room (15 people, clean but not perfect)
+const AC_ROOM = {
+  temp: 25.5,
   humidity: 52,
-  co: 0.28,
-  nh3: 0.04,
+  pm25: 12,
+  co: 0.32,
+  nh3: 0.05,
   no2: 0.010,
   so2: 0.0015,
 };
 
-// Hostel room → moderate, realistic for Node 2/3/4
-const hostel = {
-  pm25: 26,
+// Hostel room (Nodes 2, 3, 4)
+const HOSTEL = {
   temp: 27.8,
   humidity: 72,
+  pm25: 26,
   co: 0.52,
   nh3: 0.11,
   no2: 0.020,
@@ -54,18 +54,17 @@ const hostel = {
 };
 
 const baseProfile = {
-  "AQM-001": acRoom,
-  "AQM-002": hostel,
-  "AQM-003": hostel,
-  "AQM-004": hostel,
+  "AQM-001": AC_ROOM,
+  "AQM-002": HOSTEL,
+  "AQM-003": HOSTEL,
+  "AQM-004": HOSTEL,
 };
 
-// -----------------------------------------------------
-// UTILS FOR REALISTIC MICRO-DRIFT (NO JUMPS)
-// -----------------------------------------------------
+// ---------------------------------------------------------
+// SMALL REALISTIC DRIFT (NO JUMPS)
+// ---------------------------------------------------------
 
-const rand = (min: number, max: number) =>
-  Number((min + Math.random() * (max - min)).toFixed(4));
+const rand = (min: number, max: number) => Number((min + Math.random() * (max - min)).toFixed(4));
 
 function clampStep(prev: number, next: number, cap: number) {
   const diff = next - prev;
@@ -78,12 +77,12 @@ function ema(prev: number, target: number, alpha: number) {
 }
 
 const ALPHA = 0.18;
-const INTERVAL_MS = 5000; // 5 sec ESP32 interval
+const INTERVAL_MS = 5000;
 
-// Max allowed drift per reading (VERY small)
+// Drift caps (very small)
 const caps = {
-  pm1: 0.12,
   pm25: 0.20,
+  pm1: 0.12,
   pm10: 0.26,
   temperature: 0.06,
   humidity: 0.8,
@@ -93,58 +92,45 @@ const caps = {
   so2: 0.0005,
 };
 
-// -----------------------------------------------------
-// HISTORICAL READINGS (REALISTIC HOSTEL DATA)
-// -----------------------------------------------------
-
-const hostelProfile = {
-  temp: [26.5, 29.0],
-  hum: [60, 85],
-  pm25: [15, 35],
-  pm10: [25, 55],
-  pm1: [10, 20],
-  co: [0.35, 0.75],
-  nh3: [0.05, 0.20],
-  no2: [0.010, 0.030],
-  so2: [0.0003, 0.0015],
-};
+// ---------------------------------------------------------
+// HISTORICAL READINGS (Hostel environment for 2/3/4)
+// ---------------------------------------------------------
 
 export const generateMockReadings = (deviceId: string): SensorReading[] => {
-  const cfg = nodeConfigs[deviceId];
   const readings: SensorReading[] = [];
+  const cfg = nodeConfigs[deviceId];
   if (!cfg) return readings;
 
+  const full = cfg.hasFullSensors;
   const start = new Date("2025-12-02T11:38:00").getTime();
-  const end = cfg.freezeTime ? cfg.freezeTime.getTime() : new Date("2025-12-04T09:39:55").getTime();
+  const end = cfg.freezeTime ? cfg.freezeTime.getTime() : new Date("2025-12-04T09:39:00").getTime();
 
   for (let t = start; t <= end; t += 60_000) {
-    const full = cfg.hasFullSensors;
-
     readings.push({
       id: `r-${deviceId}-${t}`,
       device_id: deviceId,
       timestamp: new Date(t).toISOString(),
 
-      temperature: rand(hostelProfile.temp[0], hostelProfile.temp[1]),
-      humidity: rand(hostelProfile.hum[0], hostelProfile.hum[1]),
+      temperature: rand(26.5, 29.0),
+      humidity: rand(60, 85),
 
-      pm1: full ? rand(hostelProfile.pm1[0], hostelProfile.pm1[1]) : 0,
-      pm25: full ? rand(hostelProfile.pm25[0], hostelProfile.pm25[1]) : 0,
-      pm10: full ? rand(hostelProfile.pm10[0], hostelProfile.pm10[1]) : 0,
+      pm1: full ? rand(10, 20) : 0,
+      pm25: full ? rand(15, 35) : 0,
+      pm10: full ? rand(25, 55) : 0,
 
-      co: rand(hostelProfile.co[0], hostelProfile.co[1]),
-      nh3: rand(hostelProfile.nh3[0], hostelProfile.nh3[1]),
-      no2: rand(hostelProfile.no2[0], hostelProfile.no2[1]),
-      so2: full ? rand(hostelProfile.so2[0], hostelProfile.so2[1]) : null,
+      co: rand(0.35, 0.75),
+      nh3: rand(0.05, 0.20),
+      no2: rand(0.010, 0.030),
+      so2: full ? rand(0.0003, 0.0015) : null,
     });
   }
 
   return readings;
 };
 
-// -----------------------------------------------------
-// LIVE READINGS (REALISTIC MICRO-FLUCTUATION)
-// -----------------------------------------------------
+// ---------------------------------------------------------
+// LIVE READINGS (ONLY Node-1 & Node-4)
+// ---------------------------------------------------------
 
 function generateLiveReading(deviceId: string, prev: SensorReading | null): SensorReading | null {
   const cfg = nodeConfigs[deviceId];
@@ -161,8 +147,8 @@ function generateLiveReading(deviceId: string, prev: SensorReading | null): Sens
     humidity: rand(base.humidity - 2, base.humidity + 2),
 
     pm25: full ? rand(base.pm25 - 1, base.pm25 + 1) : 0,
-    pm1: 0,
-    pm10: 0,
+    pm1: full ? 0 : 0,
+    pm10: full ? 0 : 0,
 
     co: rand(base.co - 0.015, base.co + 0.015),
     nh3: rand(base.nh3 - 0.004, base.nh3 + 0.004),
@@ -178,11 +164,7 @@ function generateLiveReading(deviceId: string, prev: SensorReading | null): Sens
   const prevVal = prev || target;
 
   const smooth = (field: keyof SensorReading) =>
-    clampStep(
-      prevVal[field] as number,
-      ema(prevVal[field] as number, target[field] as number, ALPHA),
-      caps[field]
-    );
+    clampStep(prevVal[field] as number, ema(prevVal[field] as number, target[field] as number, ALPHA), caps[field]);
 
   return {
     id: `live-${deviceId}-${Date.now()}`,
@@ -203,9 +185,9 @@ function generateLiveReading(deviceId: string, prev: SensorReading | null): Sens
   };
 }
 
-// -----------------------------------------------------
-// INITIAL SNAPSHOT
-// -----------------------------------------------------
+// ---------------------------------------------------------
+// LATEST SNAPSHOTS (frozen for Node-2 & 3)
+// ---------------------------------------------------------
 
 export const mockLatestReadings: Record<string, SensorReading> = {
   "AQM-001": generateLiveReading("AQM-001", null)!,
@@ -214,22 +196,22 @@ export const mockLatestReadings: Record<string, SensorReading> = {
   "AQM-002": {
     id: "latest-2",
     device_id: "AQM-002",
-    timestamp: new Date("2025-12-03T00:12:00").toISOString(),
-    pm1: 16,
+    timestamp: "2025-12-03T12:12:00",
+    pm1: 14,
     pm25: 28,
     pm10: 41,
     temperature: 27.8,
     humidity: 74,
     co: 0.52,
     nh3: 0.11,
-    no2: 0.020,
+    no2: 0.02,
     so2: 0.0007,
   },
 
   "AQM-003": {
     id: "latest-3",
     device_id: "AQM-003",
-    timestamp: new Date("2025-12-03T00:12:00").toISOString(),
+    timestamp: "2025-12-03T12:12:00",
     pm1: 0,
     pm25: 0,
     pm10: 0,
@@ -242,9 +224,9 @@ export const mockLatestReadings: Record<string, SensorReading> = {
   },
 };
 
-// -----------------------------------------------------
+// ---------------------------------------------------------
 // LIVE HOOK
-// -----------------------------------------------------
+// ---------------------------------------------------------
 
 export function useLiveReadings(deviceId: string): SensorReading | null {
   const [reading, setReading] = useState<SensorReading | null>(mockLatestReadings[deviceId]);
@@ -262,3 +244,4 @@ export function useLiveReadings(deviceId: string): SensorReading | null {
 
   return reading;
 }
+
