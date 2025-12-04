@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 // ---------------------------------------------------------
 
 const nodeConfigs = {
-  "AQM-001": { hasFullSensors: true, status: "online", liveStart: new Date("2025-12-04T09:40:00") },
+  "AQM-001": { hasFullSensors: true, status: "offline", freezeTime: new Date("2025-12-04T09:40:00") }, // NOW OFFLINE & FROZEN
   "AQM-002": { hasFullSensors: true, status: "offline", freezeTime: new Date("2025-12-03T12:12:00") },
   "AQM-003": { hasFullSensors: false, status: "offline", freezeTime: new Date("2025-12-03T12:12:00") },
   "AQM-004": { hasFullSensors: false, status: "online", liveStart: new Date("2025-12-04T09:40:00") },
@@ -21,9 +21,9 @@ const nodeConfigs = {
 // ---------------------------------------------------------
 
 export const mockDevices: Device[] = [
-  { id: "1", device_id: "AQM-001", name: "Node-1", location: "Room", status: "online", battery: 85, last_update: new Date().toISOString() },
-  { id: "2", device_id: "AQM-002", name: "Node-2", location: "Room", status: "offline", battery: 90, last_update: new Date("2025-12-03T12:12:00").toISOString() },
-  { id: "3", device_id: "AQM-003", name: "Node-3", location: "Room", status: "offline", battery: 75, last_update: new Date("2025-12-03T12:12:00").toISOString() },
+  { id: "1", device_id: "AQM-001", name: "Node-1", location: "Room", status: "offline", battery: 85, last_update: "2025-12-04T09:40:00" },
+  { id: "2", device_id: "AQM-002", name: "Node-2", location: "Room", status: "offline", battery: 90, last_update: "2025-12-03T12:12:00" },
+  { id: "3", device_id: "AQM-003", name: "Node-3", location: "Room", status: "offline", battery: 75, last_update: "2025-12-03T12:12:00" },
   { id: "4", device_id: "AQM-004", name: "Node-4", location: "Room", status: "online", battery: 78, last_update: new Date().toISOString() },
 ];
 
@@ -31,7 +31,7 @@ export const mockDevices: Device[] = [
 // REALISTIC ENVIRONMENT PROFILES
 // ---------------------------------------------------------
 
-// Node-1: AC room (15 people, clean but not perfect)
+// Node-1: AC room (frozen baseline)
 const AC_ROOM = {
   temp: 25.5,
   humidity: 52,
@@ -129,7 +129,7 @@ export const generateMockReadings = (deviceId: string): SensorReading[] => {
 };
 
 // ---------------------------------------------------------
-// LIVE READINGS (ONLY Node-1 & Node-4)
+// LIVE READINGS (ONLY Node-4 NOW)
 // ---------------------------------------------------------
 
 function generateLiveReading(deviceId: string, prev: SensorReading | null): SensorReading | null {
@@ -147,8 +147,8 @@ function generateLiveReading(deviceId: string, prev: SensorReading | null): Sens
     humidity: rand(base.humidity - 2, base.humidity + 2),
 
     pm25: full ? rand(base.pm25 - 1, base.pm25 + 1) : 0,
-    pm1: full ? 0 : 0,
-    pm10: full ? 0 : 0,
+    pm1: 0,
+    pm10: 0,
 
     co: rand(base.co - 0.015, base.co + 0.015),
     nh3: rand(base.nh3 - 0.004, base.nh3 + 0.004),
@@ -186,12 +186,24 @@ function generateLiveReading(deviceId: string, prev: SensorReading | null): Sens
 }
 
 // ---------------------------------------------------------
-// LATEST SNAPSHOTS (frozen for Node-2 & 3)
+// LATEST SNAPSHOTS (frozen for Node-1, Node-2, Node-3)
 // ---------------------------------------------------------
 
 export const mockLatestReadings: Record<string, SensorReading> = {
-  "AQM-001": generateLiveReading("AQM-001", null)!,
-  "AQM-004": generateLiveReading("AQM-004", null)!,
+  "AQM-001": {
+    id: "latest-1",
+    device_id: "AQM-001",
+    timestamp: "2025-12-04T09:40:00",
+    pm1: 7,
+    pm25: 12,
+    pm10: 16,
+    temperature: 25.5,
+    humidity: 52,
+    co: 0.32,
+    nh3: 0.05,
+    no2: 0.010,
+    so2: 0.0015,
+  },
 
   "AQM-002": {
     id: "latest-2",
@@ -205,7 +217,7 @@ export const mockLatestReadings: Record<string, SensorReading> = {
     co: 0.52,
     nh3: 0.11,
     no2: 0.02,
-    so2: 0.0007,
+    so2: 0.0007,  
   },
 
   "AQM-003": {
@@ -222,6 +234,8 @@ export const mockLatestReadings: Record<string, SensorReading> = {
     no2: 0.021,
     so2: null,
   },
+
+  "AQM-004": generateLiveReading("AQM-004", null)!,
 };
 
 // ---------------------------------------------------------
@@ -244,4 +258,5 @@ export function useLiveReadings(deviceId: string): SensorReading | null {
 
   return reading;
 }
+
 
