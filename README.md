@@ -1,73 +1,52 @@
-# Welcome to your Lovable project
+# Fault-Tolerant Air Quality Monitoring and Prediction Using Heterogeneous Sensors
+Project: Fault-Tolerant Air Quality Monitoring and Prediction Using Heterogeneous Sensors
+Author: N. Prajna Deepankar
+Guide: Dr. Ranjith Ravindranathan Nair
+Institute: NIT Calicut
 
-## Project info
+Overview
+This project builds a fault‑aware, real‑time air quality monitoring system using ESP32, PMS7003, MQ‑7/135/136, DHT22, DS3231 RTC, and SD card. It detects sensor faults at the edge, attaches a fault_mask and confidence score to every data sample, and uses a ConvLSTM model for AQI forecasting. A Flask + MongoDB dashboard visualizes live data and predictions.
 
-**URL**: https://lovable.dev/projects/7dbf55d8-3c77-49e9-8d08-cf7380960708
+Hardware (Perfboard implementation)
+- ESP32 DevKit V1
+- LM2596 buck converter (12V → 5V) + 1000µF / 0.1µF decoupling
+- ADS1115 16‑bit ADC (powered at 5V, I²C with 4.7kΩ pull‑ups to 3.3V)
+- PMS7003 (UART, checksum validation)
+- MQ‑7, MQ‑135, MQ‑136 (analog via ADS1115)
+- DHT22 (GPIO4, 10kΩ pull‑up)
+- DS3231 RTC (I²C)
+- SD card module (SPI)
+- 12V adapter (2A) or 2×18650 battery backup with SPDT switch
 
-## How can I edit this code?
+Firmware Features
+- 60s deterministic sampling (millis() scheduler, no delay())
+- Oversampling + median filter for MQ sensors
+- Rs/R₀ calculation → ML‑ready ratio
+- 8‑bit fault_mask (ADC stuck, PMS fail, DHT fail, SD fail, RTC fail, voltage out of range)
+- Confidence score = 1.0 – (fault_count × 0.1), min 0.3
+- SD card first → WiFi sync (retry queue, batch upload)
+- Watchdog timer (30s) and rail voltage monitor
 
-There are several ways of editing your application.
+ML Model
+- ConvLSTM2D (30‑day sequences, 7 pollutants: PM2.5, PM10, NO2, CO, SO2, O3, NH3)
+- Trained on 26‑city CPCB data (2015‑2020), uses fault_mask/confidence when available
+- Average MAE = 8.77, RMSE = 10.55 → 21% better than LSTM
+- Fault‑rate analysis: graceful degradation up to 50% missing data
+- Ablation study: fault recovery reduces MAE by 30%
 
-**Use Lovable**
+Dashboard
+- Flask + MongoDB backend
+- Live AQI, PM, gases, temp, humidity
+- Health indicators (fault_mask decoded), confidence meter
+- Historical trends, CSV export
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/7dbf55d8-3c77-49e9-8d08-cf7380960708) and start prompting.
+Hardware Test
+- Assemble circuit on perfboard following the schematic in the thesis.
+- Upload firmware (provided separately) using Arduino IDE / PlatformIO.
+- Check serial monitor for sensor readings and fault_mask.
 
-Changes made via Lovable will be committed automatically to this repo.
+Publication
+Presented at ET2ECN 2026 (SVNIT Surat), to be published in Springer LNEE (Scopus).
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/7dbf55d8-3c77-49e9-8d08-cf7380960708) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+📧 Contact
+prajnadeepankarnelapuri@gmail.com 
